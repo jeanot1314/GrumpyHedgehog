@@ -1,17 +1,26 @@
 
+/* Project : Don't touch the GrumpyHedgehog
+   Project description : https://hackaday.io/project/180123-gesturepattern-recognition-without-camera-tof
+   Based on VL53L1X sensors from ST
+   Author : Jean Perardel
+*/
+
 #include <Wire.h>
 #include <SPI.h>
 #include <Servo.h>
 #include "Keyboard.h"
 #include "bitmap.h"
 
+#ifdef ARDUINO_SAMD_MKRWIFI1010
 #include <WiFiNINA.h>
 #include <BlynkSimpleWiFiNINA.h>
+#endif
 
 #include <Adafruit_GFX.h>    // Core graphics library
-#include <Adafruit_ST7735.h> // Hardware-specific library for ST7735
-//#include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
+//#include <Adafruit_ST7735.h> // Hardware-specific library for ST7735
+#include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
 
+// Librairies for VL53L1X
 #include <ComponentObject.h>
 #include <RangeSensor.h>
 #include <SparkFun_VL53L1X.h>//Click here to get the library: http://librarymanager/All#SparkFun_VL53L1X
@@ -20,24 +29,31 @@
 
 
 // *********************** LCD TFT variables *************************
-#define TFT_CS        7
-#define TFT_RST       6 // Or set to -1 and connect to Arduino RESET pin
-#define TFT_DC        5
-
+#define TFT_CS  8
+#define TFT_RST 10 // Or set to -1 and connect to Arduino RESET pin
+#define TFT_DC  9
+#define TFT_MOSI 11
+#define TFT_SCK 13
 // For 1.44" and 1.8" TFT with ST7735 use:
-Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
+//Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 // For 1.14", 1.3", 1.54", and 2.0" TFT with ST7789:
-//Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
+Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
+
+#define TFT_DRAW_ALGO_1
 
 // *********************** TOF variables *************************
+#define NUMBER_OF_TOF_SENSORS 3
 #define SERIAL_DEBUG 0
 #define MATRICE_DIMENSION 16
 //#define SHUTDOWN_PIN 2
 //#define INTERRUPT_PIN 3
-
-SFEVL53L1X distanceSensor;
-//Uncomment the following line to use the optional shutdown and interrupt pins.
-//SFEVL53L1X distanceSensor(Wire, SHUTDOWN_PIN, INTERRUPT_PIN);
+#define TOF_SDA 18
+#define TOF_SCL 19
+#define VL53L1X_1 17
+#define VL53L1X_2 16
+#define VL53L1X_3 15
+#define VL53L1X_4 14
+SFEVL53L1X distanceSensor_1, distanceSensor_2, distanceSensor_3, distanceSensor_4;
 
 // *********************** IR variables *************************
 #define DS18B20_PIN 0
@@ -52,12 +68,15 @@ byte ledPin = LED_BUILTIN;
 Servo myservo;  // create servo object to control a servo
 int pos_servo = 0;    // variable to store the servo position
 
-// *********************** BLYNK variables *************************
+// *********************** Person Counter BLYNK variables *************************
+int number_person = 0;
+#define NB_PERSON_MAX 2 // Person Counter
+
+#ifdef ARDUINO_SAMD_MKRWIFI1010
 volatile bool event = false;
 char auth[] = "";
 char ssid[] = "";
 char pass[] = "";
-int number_person = 0;
 
 BLYNK_WRITE(V1)
 {
@@ -77,6 +96,7 @@ void myTimerEvent()
   // Please don't send more that 10 values per second.
   Blynk.virtualWrite(V5, number_person);
 }
+#endif
 
 // *********************** PATERN Definition *************************
 boolean patern_1[4][4] = {
@@ -109,15 +129,17 @@ boolean patern_3[4][4] = {
 
 // Definition of LCD design size and colors
 // RGB 565 : F8 7E 1F
-#define EYES_SIZE 7
+#define EYES_SIZE tft.height()/16
 #define EYES_COLOR 0xFD00
 #define EYES_VERTICAL_POSITION 3*tft.height()/10
 #define EYES_1_HORIZONTAL_POSITION tft.width()/4
 #define EYES_2_HORIZONTAL_POSITION 3*tft.width()/4
 
-#define NOSE_SIZE 22
+#define NOSE_SIZE tft.height()/4//22
+#define NOSE_DOT_SIZE tft.height()/20
 #define NOSE_COLOR 0x8200
-#define NOSE_VERTICAL_POSITION 11*tft.height()/20
+#define NOSE_VERTICAL_POSITION 12*tft.height()/20
+#define NOSE_HORIZONTAL_POSITION tft.height()/2
 
 #define MOUTH_COLOR 0x9100
 #define SPEECH_COLOR 0xFD00
@@ -136,14 +158,15 @@ boolean patern_3[4][4] = {
 #define MAX_DISTANCE_SHORT_DETECTION 1280
 #define MAX_DISTANCE_LONG_DETECTION 3000
 
-#define NB_PERSON_MAX 2 // Person Counter
+
 #define SERVO_STOP_POSITION 180
 #define SERVO_ARROW_POSITION 0
 
 #define MODE_USB 0
-#define MODE_PERSON_COUNTER 2
-#define MODE_IR 3
 #define MODE_RELAY 1
+#define MODE_SERVOMOTOR 2
+#define MODE_IR 3
+#define MODE_PERSON_COUNTER 4
 
 int device_MODE = 0; // Set here the starting mode
 int nb_person = 0; // Actual number of person in the room for Person Counter
@@ -153,10 +176,20 @@ boolean flag_unlock = 0; // This flag is used to timeout the unlock sign on the 
 
 void setup(void) {
 
+  // SETUP TIME OF FLIGHT PIN
+  Wire.setSDA(TOF_SDA);
+  Wire.setSCL(TOF_SCL);
   Wire.begin();
+  VL53L1X_init(NUMBER_OF_TOF_SENSORS);
+
   Serial.begin(9600);
+
+#ifdef USB_HID
   Keyboard.begin();
-  //Blynk.begin(auth, ssid, pass);
+#endif
+#ifdef ARDUINO_SAMD_MKRWIFI1010
+  Blynk.begin(auth, ssid, pass);
+#endif
 
   pinMode(IR_LED_PIN, OUTPUT);
   pinMode(IR_TSOP2236_PIN, INPUT);
@@ -165,40 +198,31 @@ void setup(void) {
   myservo.attach(SERVO_PIN);  // attaches the servo on pin 9 to the servo object
   myservo.write(SERVO_STOP_POSITION);
 
-  Serial.println("-----START PROGRAM GRUMPY HEDGEHOG-----"); // It seems that Serial Print don't work on MKR 1010 on setup
-
-  if (distanceSensor.begin() != 0) //Begin returns 0 on a good init
-  {
-    Serial.println("Sensor failed to begin. Please check wiring. Freezing...");
-    while (1);
-  }
-  if (device_MODE != 1) {
-    VL53L1X_config(); // if we don't start with Person Counter we set a short distance configuration for TOF
-  }
-  else {
-    VL53L1X_config_long(); // if we start with Person Counter we set a long distance configuration for TOF
-  }
   HH_TFT_init(); // Initialize Grumpy Hedgehog LCD Face
+
+  Serial.println("-----START PROGRAM GRUMPY HEDGEHOG-----");
+  HH_wake_up();
 }
 
 void loop() {
   int detection_trigger = 0;
 
+
   if (device_MODE != MODE_PERSON_COUNTER) {
-    detection_trigger = detect_All(); // General detection for TOF on the entire grid at short range
+    detection_trigger = detect_All(distanceSensor_1); // General detection for TOF on the entire grid at short range
   }
   else {
-    detection_trigger = detect_All(); // General detection for TOF on the entire grid at short range
+    detection_trigger = detect_All(distanceSensor_1); // General detection for TOF on the entire grid at short range
     //detection_trigger = detect_All_longDistance(); // General detection for TOF on the entire grid at long range for person Counter
   }
 
   if (detection_trigger) {
     int Direction = 0;
     if (device_MODE != MODE_PERSON_COUNTER) {
-      Direction = detect_LeftRightUpStatic(); // This function detect one of the 4 mouvements : Left / Right / Up / Static
+      Direction = detect_LeftRightUpStatic(distanceSensor_1); // This function detect one of the 4 mouvements : Left / Right / Up / Static
     }
     else {
-      Direction = detect_LeftRightUpStatic(); // This function detect one of the 4 mouvements : Left / Right / Up / Static
+      Direction = detect_LeftRightUpStatic(distanceSensor_1); // This function detect one of the 4 mouvements : Left / Right / Up / Static
       //Direction = detect_LeftRightStatic_longDistance(); // This function detect one of the 3 mouvements : Left / Right / Static for Person Counter (long distance)
     }
     if (Direction) {
@@ -206,11 +230,17 @@ void loop() {
       delay(500);
       if (Direction == CODE_RIGHT) { // Right movement detected
         //Serial.println("RIGHT");
+#ifdef TFT_DRAW_ALGO_1
         HH_look(+13, 0);
+#elif TFT_DRAW_ALGO_2
+        HH_look_left_right(44);
+#endif
         switch (device_MODE) {
           case MODE_USB: // USB
-            //HH_speak_mode("USB   PLAY");
-            //Keyboard.print(" ");
+            HH_speak_mode("USB   PLAY");
+#ifdef USB_HID
+            Keyboard.print(" "); // Set here the command you want to send
+#endif
             break;
           case MODE_PERSON_COUNTER: // Person Counter, +1
             nb_person++;
@@ -219,25 +249,31 @@ void loop() {
               myservo.write(SERVO_STOP_POSITION);  // tell servo to go to position STOP
             }
             break;
-          case MODE_IR: 
+          case MODE_IR:
             HH_speak_mode("IR    VOL+");
             digitalWrite(IR_LED_PIN, HIGH); // TODO
             break;
-          case MODE_RELAY: 
+          case MODE_RELAY:
             HH_speak_mode("RELAY  ON");
             digitalWrite(RELAY_PIN, HIGH);
             delay(200);
-            //myservo.write(SERVO_STOP_POSITION); // tell servo to go to position STOP
+            myservo.write(SERVO_STOP_POSITION); // tell servo to go to position STOP
             break;
         }
       }
       else if (Direction == CODE_LEFT) { // Left movement detected
         //Serial.println("LEFT");
+#ifdef TFT_DRAW_ALGO_1
         HH_look(-13, 0);
+#elif TFT_DRAW_ALGO_2
+        HH_look_left_right(-44);
+#endif
         switch (device_MODE) {
           case MODE_USB:
-            //HH_speak_mode("USB   STOP   ");
-            //Keyboard.print("q");
+            HH_speak_mode("USB   STOP   ");
+#ifdef USB_HID
+            Keyboard.print("q");
+#endif
             break;
           case MODE_PERSON_COUNTER:
             if (nb_person > 0) {
@@ -250,7 +286,7 @@ void loop() {
             break;
           case MODE_IR:
             HH_speak_mode("IR    VOL-");
-            digitalWrite(IR_LED_PIN, LOW);
+            digitalWrite(IR_LED_PIN, LOW); // TODO Finish connecting IR
             break;
           case MODE_RELAY:
             HH_speak_mode("RELAY  OFF");
@@ -262,7 +298,11 @@ void loop() {
       }
       else if (Direction == CODE_UP) { // up movement detected
         //Serial.println("UP");
+#ifdef TFT_DRAW_ALGO_1
         HH_look(0, -10);
+#elif TFT_DRAW_ALGO_2
+        HH_look_up_down(44);
+#endif
         delay(200);
         HH_happy();
         //HH_speak_mode("  UNLOCK  ");
@@ -271,7 +311,11 @@ void loop() {
       }
       else if (Direction == CODE_STATIC) { // static hand movement detected
         //Serial.println("STATIC");
+#ifdef TFT_DRAW_ALGO_1
         HH_look(0, 10);
+#elif TFT_DRAW_ALGO_2
+        HH_look_up_down(-44);
+#endif
         delay(200);
         HH_happy();
         if (device_MODE >= 3) {
@@ -282,7 +326,7 @@ void loop() {
         }
         switch (device_MODE) {
           case MODE_USB:
-            //HH_speak_mode("USB   MODE");
+            HH_speak_mode("USB   MODE");
             break;
           case MODE_PERSON_COUNTER:
             nb_person = 0;
@@ -314,23 +358,24 @@ void loop() {
 
   if (global_cpt % MAX_COUNTER == MAX_COUNTER / 0x2FF && flag_text_timeout == 1) { // remove text after timeout
     HH_speak_mode("");
-    HH_original_state();
+    //HH_original_state();
     flag_text_timeout = 0;
   }
 
   if (flag_unlock == 1) { // start the detection patern mode
-    int patern_return = detect_patern(4, 4);
-    //look_around();
+    int patern_return = detect_patern(distanceSensor_1, 4, 4);
     tft.fillScreen(ST77XX_BLACK);
     flag_unlock = 0;
-    HH_original_state();
+    //  HH_original_state();
   }
 
   if (device_MODE == MODE_PERSON_COUNTER) {
-    /*Serial.print("BLYNK CONNECTED STATUS : ");
-      Serial.println(Blynk.connected());
-      Blynk.run();
-      timer.run(); // Initiates BlynkTimer*/
+#ifdef ARDUINO_SAMD_MKRWIFI1010
+    Serial.print("BLYNK CONNECTED STATUS : ");
+    Serial.println(Blynk.connected());
+    Blynk.run();
+    timer.run(); // Initiates BlynkTimer
+#endif
     number_person = random(0, 5);
   }
 
@@ -342,14 +387,30 @@ void loop() {
   }
 }
 
+
 void patern_1_secret_action() {
+#ifdef USB_SERIAL
+  Serial.println("PASSWORD");
+#endif
+#ifdef USB_HID
   Keyboard.print("PASSWORD");
+#endif
 }
 
 void patern_2_secret_action() {
+#ifdef USB_SERIAL
+  Serial.println("START_MUSIC");
+#endif
+#ifdef USB_HID
   Keyboard.print("START_MUSIC");
+#endif
 }
 
 void patern_3_secret_action() {
+#ifdef USB_SERIAL
+  Serial.println("HELLO_WORLD");
+#endif
+#ifdef USB_HID
   Keyboard.print("HELLO_WORLD");
+#endif
 }
