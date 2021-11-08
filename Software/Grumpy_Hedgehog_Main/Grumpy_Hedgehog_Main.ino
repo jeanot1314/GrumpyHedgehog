@@ -32,8 +32,11 @@
 #define TFT_CS  8
 #define TFT_RST 10 // Or set to -1 and connect to Arduino RESET pin
 #define TFT_DC  9
+
+#ifndef ARDUINO_SAMD_MKRWIFI1010
 #define TFT_MOSI 11
 #define TFT_SCK 13
+#endif
 // For 1.44" and 1.8" TFT with ST7735 use:
 //Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 // For 1.14", 1.3", 1.54", and 2.0" TFT with ST7789:
@@ -47,13 +50,34 @@ Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 #define MATRICE_DIMENSION 16
 //#define SHUTDOWN_PIN 2
 //#define INTERRUPT_PIN 3
+
+#if defined(TEENSYDUINO)
 #define TOF_SDA 18
 #define TOF_SCL 19
 #define VL53L1X_1 17
 #define VL53L1X_2 16
 #define VL53L1X_3 15
 #define VL53L1X_4 14
-SFEVL53L1X distanceSensor_1, distanceSensor_2, distanceSensor_3, distanceSensor_4;
+
+#elif defined(ARDUINO_SAMD_MKRWIFI1010)
+#define TOF_SDA 8
+#define TOF_SCL 9
+#define VL53L1X_1 7
+#define VL53L1X_2 6
+#define VL53L1X_3 5
+#define VL53L1X_4 4
+
+#else // #if defined(__AVR_ATmega8__)
+#define TOF_SDA A4
+#define TOF_SCL A5
+#define VL53L1X_1 A0
+#define VL53L1X_2 A1
+#define VL53L1X_3 A2
+#define VL53L1X_4 A3
+#endif
+
+//SFEVL53L1X distanceSensor_1, distanceSensor_2, distanceSensor_3, distanceSensor_4;
+SFEVL53L1X distanceSensor[4];
 
 // *********************** IR variables *************************
 #define DS18B20_PIN 0
@@ -177,8 +201,10 @@ boolean flag_unlock = 0; // This flag is used to timeout the unlock sign on the 
 void setup(void) {
 
   // SETUP TIME OF FLIGHT PIN
+#ifdef TEENSYDUINO
   Wire.setSDA(TOF_SDA);
   Wire.setSCL(TOF_SCL);
+#endif
   Wire.begin();
   VL53L1X_init(NUMBER_OF_TOF_SENSORS);
 
@@ -209,20 +235,20 @@ void loop() {
 
 
   if (device_MODE != MODE_PERSON_COUNTER) {
-    detection_trigger = detect_All(distanceSensor_1); // General detection for TOF on the entire grid at short range
+    detection_trigger = detect_All(); // General detection for TOF on the entire grid at short range
   }
   else {
-    detection_trigger = detect_All(distanceSensor_1); // General detection for TOF on the entire grid at short range
+    detection_trigger = detect_All(); // General detection for TOF on the entire grid at short range
     //detection_trigger = detect_All_longDistance(); // General detection for TOF on the entire grid at long range for person Counter
   }
 
   if (detection_trigger) {
     int Direction = 0;
     if (device_MODE != MODE_PERSON_COUNTER) {
-      Direction = detect_LeftRightUpStatic(distanceSensor_1); // This function detect one of the 4 mouvements : Left / Right / Up / Static
+      // ***Direction = detect_LeftRightUpStatic(); // This function detect one of the 4 mouvements : Left / Right / Up / Static
     }
     else {
-      Direction = detect_LeftRightUpStatic(distanceSensor_1); // This function detect one of the 4 mouvements : Left / Right / Up / Static
+      // ***Direction = detect_LeftRightUpStatic(); // This function detect one of the 4 mouvements : Left / Right / Up / Static
       //Direction = detect_LeftRightStatic_longDistance(); // This function detect one of the 3 mouvements : Left / Right / Static for Person Counter (long distance)
     }
     if (Direction) {
@@ -231,9 +257,9 @@ void loop() {
       if (Direction == CODE_RIGHT) { // Right movement detected
         //Serial.println("RIGHT");
 #ifdef TFT_DRAW_ALGO_1
-        HH_look(+13, 0);
+        HH_V1_look(+13, 0);
 #elif TFT_DRAW_ALGO_2
-        HH_look_left_right(44);
+        HH_V2_look_left_right(44);
 #endif
         switch (device_MODE) {
           case MODE_USB: // USB
@@ -264,9 +290,9 @@ void loop() {
       else if (Direction == CODE_LEFT) { // Left movement detected
         //Serial.println("LEFT");
 #ifdef TFT_DRAW_ALGO_1
-        HH_look(-13, 0);
+        HH_V1_look(-13, 0);
 #elif TFT_DRAW_ALGO_2
-        HH_look_left_right(-44);
+        HH_V2_look_left_right(-44);
 #endif
         switch (device_MODE) {
           case MODE_USB:
@@ -299,9 +325,9 @@ void loop() {
       else if (Direction == CODE_UP) { // up movement detected
         //Serial.println("UP");
 #ifdef TFT_DRAW_ALGO_1
-        HH_look(0, -10);
+        HH_V1_look(0, -10);
 #elif TFT_DRAW_ALGO_2
-        HH_look_up_down(44);
+        HH_V2_look_up_down(44);
 #endif
         delay(200);
         HH_happy();
@@ -312,9 +338,9 @@ void loop() {
       else if (Direction == CODE_STATIC) { // static hand movement detected
         //Serial.println("STATIC");
 #ifdef TFT_DRAW_ALGO_1
-        HH_look(0, 10);
+        HH_V1_look(0, 10);
 #elif TFT_DRAW_ALGO_2
-        HH_look_up_down(-44);
+        HH_V2_look_up_down(-44);
 #endif
         delay(200);
         HH_happy();
@@ -363,7 +389,7 @@ void loop() {
   }
 
   if (flag_unlock == 1) { // start the detection patern mode
-    int patern_return = detect_patern(distanceSensor_1, 4, 4);
+    int patern_return = detect_patern(distanceSensor[0], 4, 4);
     tft.fillScreen(ST77XX_BLACK);
     flag_unlock = 0;
     //  HH_original_state();

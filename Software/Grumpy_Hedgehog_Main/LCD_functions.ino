@@ -1,5 +1,7 @@
 
-
+/*
+ * Init tft screen. Here you can choose wich type of screen you want.
+ */
 void HH_TFT_init() {
   // Use this initializer if using a 1.8" TFT screen:
   //tft.initR(INITR_BLACKTAB);      // Init ST7735S chip, black tab
@@ -14,8 +16,10 @@ void HH_TFT_init() {
   //tft.initR(INITR_MINI160x80);  // Init ST7735S mini display
 
   // OR use this initializer (uncomment) if using a 1.3" or 1.54" 240x240 TFT:
+  #ifdef TEENSYDUINO
   SPI.setMOSI(TFT_MOSI);
   SPI.setSCK(TFT_SCK);
+  #endif
   tft.init(240, 240, SPI_MODE2);           // Init ST7789 240x240
 
   // OR use this initializer (uncomment) if using a 2.0" 320x240 TFT:
@@ -29,10 +33,13 @@ void HH_TFT_init() {
   // may end up with a black screen some times, or all the time.
   //tft.setSPISpeed(40000000);
   tft.fillScreen(ST77XX_BLACK);
-  //tft.setRotation(2);
+  //tft.setRotation(2); // Important if you use the screen upside down
 }
 
-void HH_speak_mode(String val) { // write on the entire bottom line of the screen
+/*
+ * Write text on the screen
+ */
+void HH_speak_mode(String val) { 
   tft.setCursor(5, 7 * tft.height() / 8 - 2);
   tft.fillRect(0, 7 * tft.height() / 8 - 2, tft.width(), (tft.height() / 8) - 2, ST77XX_BLACK);
   tft.setTextColor(SPEECH_COLOR);
@@ -41,6 +48,9 @@ void HH_speak_mode(String val) { // write on the entire bottom line of the scree
   flag_text_timeout = 1;
 }
 
+/*
+ * Write numbers on the screen
+ */
 void HH_speak_counter(int cpt) { // write on the entire bottom line of the screen
   String val;
   switch (cpt) {
@@ -65,6 +75,9 @@ void HH_speak_counter(int cpt) { // write on the entire bottom line of the scree
   flag_text_timeout = 1;
 }
 
+/*
+ * Write text on the screen
+ */
 void HH_speak(String val) { // write large in the middle of the screen
   String secret = "SECRET";
   tft.setCursor(10, 1 * tft.height() / 8);
@@ -82,8 +95,10 @@ void HH_speak(String val) { // write large in the middle of the screen
   tft.println(val);
 }
 
+/*
+ * Start by waking up with eyes close
+ */
 void HH_wake_up() {
-
   HH_eyes_close(true);
   HH_nose(true, 0, 0);
   delay(2000);
@@ -91,12 +106,19 @@ void HH_wake_up() {
   flag_text_timeout = 1;
 }
 
+/*
+ * Back to original state
+ */
 void HH_original_state() {
   HH_nose(true, 0, 0);
   HH_eyes(true, 0, 0);
 }
 
-void HH_look(int horizontal, int vertical) {
+/*
+ * Algorithm graphic V1 to look in any direction
+ * Just specify where to move with horizontal and vertical
+ */
+void HH_V1_look(int horizontal, int vertical) {
   int speed_delay = 800;
   for (int i = 0; i < 1; i++) {
     HH_eyes(false, 0, 0);
@@ -121,8 +143,10 @@ void HH_look(int horizontal, int vertical) {
   }
 }
 
-
-void HH_look_left_right(int horizontal) {
+/*
+ * Algorithm graphic V2 to look left and right
+ */
+void HH_V2_look_left_right(int horizontal) {
   int sp = 4;
   int delay_slow = 3;
   int pause = 1000;
@@ -261,8 +285,10 @@ void HH_look_left_right(int horizontal) {
   }
 }
 
-
-void HH_look_up_down(int vertical) {
+/*
+ * Algorithm graphic V2 to look up and down
+ */
+void HH_V2_look_up_down(int vertical) {
   int sp = 4;
   int delay_slow = 5;
   int pause = 1000;
@@ -434,6 +460,9 @@ void HH_look_pictures(int horizontal, int vertical) {
   HH_nose(true, 0, 0);
 }
 
+/*
+ * Look from one place to another (unused for now)
+ */
 void HH_lookFromTo(int horizontal_from, int vertical_from, int horizontal_to, int vertical_to) {
   int inter_speed_delay = 10;
   HH_eyes(false, horizontal_from, vertical_from);

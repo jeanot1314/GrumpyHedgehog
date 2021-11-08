@@ -1,7 +1,11 @@
 
+/*
+   Specify the number of VL53L1X present to init.
+   This function can block the system if PIN aren't definied accordingly to the start order
+*/
 void VL53L1X_init(int nbr_sensors) {
 
-  pinMode(VL53L1X_1, OUTPUT);
+
   pinMode(VL53L1X_2, OUTPUT);
   pinMode(VL53L1X_3, OUTPUT);
   pinMode(VL53L1X_4, OUTPUT);
@@ -13,80 +17,81 @@ void VL53L1X_init(int nbr_sensors) {
   if (nbr_sensors >= 1) {
     digitalWrite(VL53L1X_1, HIGH);
     delay(150);
-    if (distanceSensor_1.begin() != 0) //Begin returns 0 on a good init
+    if (distanceSensor[0].begin() != 0) //Begin returns 0 on a good init
     {
       Serial.println("Sensor 1 failed to begin. Please check wiring. Freezing...");
       while (1);
     }
     Serial.print("Sensor 1 address : 0x");
-    Serial.println(distanceSensor_1.getI2CAddress(), HEX);
+    Serial.println(distanceSensor[0].getI2CAddress(), HEX);
     delay(100);
-    distanceSensor_1.setI2CAddress(0x11);
+    distanceSensor[0].setI2CAddress(0x11);
     //digitalWrite(VL53L1X_1, LOW);
     delay(100);
     Serial.print("Sensor 1 address : 0x");
-    Serial.println(distanceSensor_1.getI2CAddress(), HEX);
-    VL53L1X_config(distanceSensor_1); // if we don't start with Person Counter we set a short distance configuration for TOF
+    Serial.println(distanceSensor[0].getI2CAddress(), HEX);
   }
 
   if (nbr_sensors >= 2) {
     digitalWrite(VL53L1X_2, HIGH);
     delay(150);
-    if (distanceSensor_2.begin() != 0) //Begin returns 0 on a good init
+    if (distanceSensor[1].begin() != 0) //Begin returns 0 on a good init
     {
       Serial.println("Sensor 2 failed to begin. Please check wiring. Freezing...");
       while (1);
     }
     Serial.print("Sensor 2 address : 0x");
-    Serial.println(distanceSensor_2.getI2CAddress(), HEX);
+    Serial.println(distanceSensor[1].getI2CAddress(), HEX);
     delay(100);
-    distanceSensor_2.setI2CAddress(0x22);
+    distanceSensor[1].setI2CAddress(0x22);
     //digitalWrite(VL53L1X_2, LOW);
     delay(100);
     Serial.print("Sensor 2 address : 0x");
-    Serial.println(distanceSensor_2.getI2CAddress(), HEX);
-    VL53L1X_config(distanceSensor_2); // if we don't start with Person Counter we set a short distance configuration for TOF
+    Serial.println(distanceSensor[1].getI2CAddress(), HEX);
   }
 
   if (nbr_sensors >= 3) {
     digitalWrite(VL53L1X_3, HIGH);
     delay(150);
-    if (distanceSensor_3.begin() != 0) //Begin returns 0 on a good init
+    if (distanceSensor[2].begin() != 0) //Begin returns 0 on a good init
     {
       Serial.println("Sensor 3 failed to begin. Please check wiring. Freezing...");
       while (1);
     }
     Serial.print("Sensor 3 address : 0x");
-    Serial.println(distanceSensor_3.getI2CAddress(), HEX);
+    Serial.println(distanceSensor[2].getI2CAddress(), HEX);
     delay(100);
-    distanceSensor_3.setI2CAddress(0x44);
+    distanceSensor[2].setI2CAddress(0x44);
     //digitalWrite(VL53L1X_3, LOW);
     delay(100);
     Serial.print("Sensor 3 address : 0x");
-    Serial.println(distanceSensor_3.getI2CAddress(), HEX);
-    VL53L1X_config(distanceSensor_3); // if we don't start with Person Counter we set a short distance configuration for TOF
+    Serial.println(distanceSensor[2].getI2CAddress(), HEX);
   }
 
   if (nbr_sensors >= 4) {
     digitalWrite(VL53L1X_4, HIGH);
     delay(150);
-    if (distanceSensor_4.begin() != 0) //Begin returns 0 on a good init
+    if (distanceSensor[3].begin() != 0) //Begin returns 0 on a good init
     {
       Serial.println("Sensor 4 failed to begin. Please check wiring. Freezing...");
       while (1);
     }
     Serial.print("Sensor 4 address : 0x");
-    Serial.println(distanceSensor_4.getI2CAddress(), HEX);
+    Serial.println(distanceSensor[3].getI2CAddress(), HEX);
     delay(100);
-    distanceSensor_4.setI2CAddress(0x88);
+    distanceSensor[3].setI2CAddress(0x88);
     //digitalWrite(VL53L1X_4, LOW);
     delay(100);
     Serial.print("Sensor 4 address : 0x");
-    Serial.println(distanceSensor_4.getI2CAddress(), HEX);
-    VL53L1X_config(distanceSensor_4); // if we don't start with Person Counter we set a short distance configuration for TOF
+    Serial.println(distanceSensor[3].getI2CAddress(), HEX);
+
+    VL53L1X_config(); // if we don't start with Person Counter we set a short distance configuration for TOF
   }
 }
 
+/*
+   For debug : get all the information of the sensor configuration
+*/
 void VL53L1X_info(SFEVL53L1X distanceSensor) {
   VL53L1X_Version_t Version = distanceSensor.getSoftwareVersion();
   Serial.print("Software Version : 0x");
@@ -107,32 +112,40 @@ void VL53L1X_info(SFEVL53L1X distanceSensor) {
   //Serial.print("ThresholdHigh : ");Serial.println(distanceSensor.getDistanceThresholdHigh());
 }
 
-void VL53L1X_config(SFEVL53L1X distanceSensor) {
-  int read_delay = 20; //ms
-  //distanceSensor.setDistanceThreshold(300, 400,3);
-  //distanceSensor.setI2CAddress(0x52); // default 0xEACC
-  // For fast ranging VL53L1_SetPresetMode (Dev, VL53L1_PRESETMODE_LITE_RANGING)
-  //document https://www.st.com/en/imaging-and-photonics-solutions/vl53l1x.html#resource
-  distanceSensor.setTimingBudgetInMs(read_delay); // test 10 ?
-  distanceSensor.setDistanceModeShort(); // should be short to be faster?
-  distanceSensor.setIntermeasurementPeriod(read_delay);
-}
-
 /*
- * Setting long distance configuration with a longer Timing Budget 
+   Configure sensor for short distance reading (faster)
 */
-void VL53L1X_config_long(SFEVL53L1X distanceSensor) {
-  int read_delay = 100; //ms
-  //distanceSensor.setDistanceThreshold(300, 400,3);
-  //distanceSensor.setI2CAddress(0x52); // default 0xEACC
-  // For fast ranging VL53L1_SetPresetMode (Dev, VL53L1_PRESETMODE_LITE_RANGING)
-  //document https://www.st.com/en/imaging-and-photonics-solutions/vl53l1x.html#resource
-  distanceSensor.setTimingBudgetInMs(read_delay); // test 10 ?
-  distanceSensor.setDistanceModeLong(); // should be short to be faster?
-  distanceSensor.setIntermeasurementPeriod(read_delay);
+void VL53L1X_config() {
+  int read_delay = 20; //ms
+  for (int i = 0; i < NUMBER_OF_TOF_SENSORS; i++) {
+    //distanceSensor.setDistanceThreshold(300, 400,3);
+    //distanceSensor.setI2CAddress(0x52); // default 0xEACC
+    // For fast ranging VL53L1_SetPresetMode (Dev, VL53L1_PRESETMODE_LITE_RANGING)
+    //document https://www.st.com/en/imaging-and-photonics-solutions/vl53l1x.html#resource
+    distanceSensor[i].setTimingBudgetInMs(read_delay); // test 10 ?
+    distanceSensor[i].setDistanceModeShort(); // should be short to be faster?
+    distanceSensor[i].setIntermeasurementPeriod(read_delay);
+  }
 }
 
 /*
+   Setting long distance configuration with a longer Timing Budget
+*/
+/*
+  void VL53L1X_config_long(SFEVL53L1X distanceSensor) {
+  int read_delay = 100; //ms
+  for (int i = 0; i < NUMBER_OF_TOF_SENSORS; i++) {
+    //distanceSensor.setDistanceThreshold(300, 400,3);
+    //distanceSensor.setI2CAddress(0x52); // default 0xEACC
+    // For fast ranging VL53L1_SetPresetMode (Dev, VL53L1_PRESETMODE_LITE_RANGING)
+    //document https://www.st.com/en/imaging-and-photonics-solutions/vl53l1x.html#resource
+    distanceSensor[i].setTimingBudgetInMs(read_delay); // test 10 ?
+    distanceSensor[i].setDistanceModeLong(); // should be short to be faster?
+    distanceSensor[i].setIntermeasurementPeriod(read_delay);
+  }
+  }/*
+
+  /*
    Read sensor and print patern on the LCD
    If the sensor is saturated with an object for few seconds, it leaves the function
 */
@@ -266,7 +279,7 @@ int detect_patern(SFEVL53L1X distanceSensor, int nb_lines, int nb_colones) {
       HH_speak("1");
       patern_1_secret_action();
       delay(4000);
-      if (detect_All(distanceSensor_1) == 0) {
+      if (detect_All() == 0) {
         return 1;
       }
     }
@@ -275,7 +288,7 @@ int detect_patern(SFEVL53L1X distanceSensor, int nb_lines, int nb_colones) {
       HH_speak("2");
       patern_2_secret_action();
       delay(4000);
-      if (detect_All(distanceSensor_1) == 0) {
+      if (detect_All() == 0) {
         return 2;
       }
     }
@@ -284,7 +297,7 @@ int detect_patern(SFEVL53L1X distanceSensor, int nb_lines, int nb_colones) {
       HH_speak("3");
       patern_3_secret_action();
       delay(4000);
-      if (detect_All(distanceSensor_1) == 0) {
+      if (detect_All() == 0) {
         return 3;
       }
     }
@@ -444,7 +457,8 @@ int look_around(SFEVL53L1X distanceSensor) {
    Check the entire grid of the sensor. If it detect a value inside the defined range
    Return 1 if something is detected
 */
-int detect_4_sensors(int tab[4][200], int cpt) {
+/*
+  int detect_4_sensors(int tab[4][200], int cpt) {
   int range = 250;
   int distance_1 = MAX_DISTANCE_SHORT_DETECTION;
   int distance_2 = MAX_DISTANCE_SHORT_DETECTION;
@@ -497,246 +511,253 @@ int detect_4_sensors(int tab[4][200], int cpt) {
   else {
     return 0;
   }
-}
+  }
+  :*
 
-
-/*
+  /*
    Check the entire grid of the sensor. If it detect a value inside the defined range
    Return 1 if something is detected
 */
-int detect_All(SFEVL53L1X distanceSensor) {
+int detect_All() {
   int range = 250;
   int distanceAll = MAX_DISTANCE_SHORT_DETECTION;
-  distanceSensor.setROI(16, 16, 198);
-  distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
-  while (!distanceSensor_1.checkForDataReady()) {
-    delay(1);
+  for (int i = 0; i < NUMBER_OF_TOF_SENSORS; i++)
+  {
+    distanceSensor[i].setROI(16, 16, 198);
+    distanceSensor[i].startRanging(); //Write configuration bytes to initiate measurement
   }
-  distanceAll = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
-  if (distanceAll >= MAX_DISTANCE_SHORT_DETECTION) {
-    distanceAll = MAX_DISTANCE_SHORT_DETECTION;
-  }
-  distanceSensor.clearInterrupt();
-  distanceSensor.stopRanging();
+  for (int i = 0; i < NUMBER_OF_TOF_SENSORS; i++)
+  {
+    while (!distanceSensor[i].checkForDataReady()) {
+      delay(1);
+    }
+    distanceAll = distanceSensor[i].getDistance(); //Get the result of the measurement from the sensor
+    if (distanceAll >= MAX_DISTANCE_SHORT_DETECTION) {
+      distanceAll = MAX_DISTANCE_SHORT_DETECTION;
+    }
+    distanceSensor[i].clearInterrupt();
+    distanceSensor[i].stopRanging();
 
-  if (distanceAll < range) {
-    return 1;
+    if (distanceAll < range) {
+      return 1;
+    }
   }
-  else {
-    return 0;
-  }
+  return 0;
 }
 
 /*
    Check the entire grid of the sensor. If it detect a value inside the defined range
    Return 1 if something is detected
 */
-int detect_All_longDistance(SFEVL53L1X distanceSensor) {
+int detect_All_longDistance() {
   int range = 2000;
   int distanceAll = MAX_DISTANCE_LONG_DETECTION;
-  distanceSensor.setROI(16, 16, 198);
-  distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
-  while (!distanceSensor.checkForDataReady()) {
-    delay(1);
+  for (int i = 0; i < NUMBER_OF_TOF_SENSORS; i++) {
+    distanceSensor[i].setROI(16, 16, 198);
+    distanceSensor[i].startRanging(); //Write configuration bytes to initiate measurement
   }
-  distanceAll = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
-  if (distanceAll >= MAX_DISTANCE_LONG_DETECTION) {
-    distanceAll = MAX_DISTANCE_LONG_DETECTION;
-  }
-  distanceSensor.clearInterrupt();
-  distanceSensor.stopRanging();
+  for (int i = 0; i < NUMBER_OF_TOF_SENSORS; i++) {
+    while (!distanceSensor[i].checkForDataReady()) {
+      delay(1);
+    }
+    distanceAll = distanceSensor[i].getDistance(); //Get the result of the measurement from the sensor
+    if (distanceAll >= MAX_DISTANCE_LONG_DETECTION) {
+      distanceAll = MAX_DISTANCE_LONG_DETECTION;
+    }
+    distanceSensor[i].clearInterrupt();
+    distanceSensor[i].stopRanging();
 
-  if (distanceAll < range) {
-    return 1;
-  }
-  else {
-    return 0;
+    if (distanceAll < range) {
+      return 1;
+    }
   }
 }
 
-int detect_LeftRightUpStatic(SFEVL53L1X distanceSensor) { // this function detect 4 mouvements : Left, right, up, and static
+int detect_LeftRightUpStatic() { // this function detect 4 mouvements : Left, right, up, and static
   int range = 220;
   int directionLRUS = 0;
   int counter_static = 0;
   int static_timer = 10;
   //Serial.println("Enter Function : detect_LeftRightUpStatic");
+  for (int i = 0; i < NUMBER_OF_TOF_SENSORS; i++) {
+    while (directionLRUS != CODE_RIGHT && directionLRUS != CODE_LEFT && directionLRUS != CODE_UP && directionLRUS != CODE_STATIC) {
+      int distanceL = 511;
+      distanceSensor[i].setROI(4, 4, 106); // left
+      distanceSensor[i].startRanging(); //Write configuration bytes to initiate measurement
+      while (!distanceSensor[i].checkForDataReady()) {
+        delayMicroseconds(10);
+      }
+      distanceL = distanceSensor[i].getDistance(); //Get the result of the measurement from the sensor
+      if (distanceL >= MAX_DISTANCE_SHORT_DETECTION) {
+        distanceL = MAX_DISTANCE_SHORT_DETECTION;
+      }
+      distanceSensor[i].clearInterrupt();
+      distanceSensor[i].stopRanging();
 
-  while (directionLRUS != CODE_RIGHT && directionLRUS != CODE_LEFT && directionLRUS != CODE_UP && directionLRUS != CODE_STATIC) {
-    int distanceL = 511;
-    distanceSensor.setROI(4, 4, 106); // left
-    distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
-    while (!distanceSensor.checkForDataReady()) {
-      delayMicroseconds(10);
-    }
-    distanceL = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
-    if (distanceL >= MAX_DISTANCE_SHORT_DETECTION) {
-      distanceL = MAX_DISTANCE_SHORT_DETECTION;
-    }
-    distanceSensor.clearInterrupt();
-    distanceSensor.stopRanging();
+      int distanceR = 511;
+      distanceSensor[i].setROI(4, 4, 10); // right
+      distanceSensor[i].startRanging(); //Write configuration bytes to initiate measurement
+      while (!distanceSensor[i].checkForDataReady()) {
+        delayMicroseconds(10);
+      }
+      distanceR = distanceSensor[i].getDistance(); //Get the result of the measurement from the sensor
+      if (distanceR >= MAX_DISTANCE_SHORT_DETECTION) {
+        distanceR = MAX_DISTANCE_SHORT_DETECTION;
+      }
+      distanceSensor[i].clearInterrupt();
+      distanceSensor[i].stopRanging();
 
-    int distanceR = 511;
-    distanceSensor.setROI(4, 4, 10); // right
-    distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
-    while (!distanceSensor.checkForDataReady()) {
-      delayMicroseconds(10);
-    }
-    distanceR = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
-    if (distanceR >= MAX_DISTANCE_SHORT_DETECTION) {
-      distanceR = MAX_DISTANCE_SHORT_DETECTION;
-    }
-    distanceSensor.clearInterrupt();
-    distanceSensor.stopRanging();
+      int distanceU = 511;
+      distanceSensor[i].setROI(4, 4, 193); // left
+      distanceSensor[i].startRanging(); //Write configuration bytes to initiate measurement
+      while (!distanceSensor[i].checkForDataReady()) {
+        delayMicroseconds(10);
+      }
+      distanceU = distanceSensor[i].getDistance(); //Get the result of the measurement from the sensor
+      if (distanceU >= MAX_DISTANCE_SHORT_DETECTION) {
+        distanceU = MAX_DISTANCE_SHORT_DETECTION;
+      }
+      distanceSensor[i].clearInterrupt();
+      distanceSensor[i].stopRanging();
 
-    int distanceU = 511;
-    distanceSensor.setROI(4, 4, 193); // left
-    distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
-    while (!distanceSensor.checkForDataReady()) {
-      delayMicroseconds(10);
-    }
-    distanceU = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
-    if (distanceU >= MAX_DISTANCE_SHORT_DETECTION) {
-      distanceU = MAX_DISTANCE_SHORT_DETECTION;
-    }
-    distanceSensor.clearInterrupt();
-    distanceSensor.stopRanging();
+      // Détection en deux temps avec flag directionLRUS_tmp
+      if (distanceR < range && distanceL < range && distanceU < range) {
+        if (directionLRUS == 0) {
+          directionLRUS = 1;
+          Serial.print("DETECT ");
+        }
 
-    // Détection en deux temps avec flag directionLRUS_tmp
-    if (distanceR < range && distanceL < range && distanceU < range) {
-      if (directionLRUS == 0) {
-        directionLRUS = 1;
-        Serial.print("DETECT ");
+        if (counter_static >= static_timer) {
+          directionLRUS = CODE_STATIC;
+          //Serial.print("STATIC "); // change mode
+        }
+        else {
+          counter_static++;
+        }
+      } // detect something
+      else if (distanceR < range && distanceL > range && distanceU > range && directionLRUS == 1) {
+        directionLRUS = CODE_RIGHT;
+        Serial.print("RIGHT ");
+      }
+      else if (distanceR > range && distanceL < range && distanceU > range && directionLRUS == 1) {
+        directionLRUS = CODE_LEFT;
+        Serial.print("LEFT ");
+      }
+      else if (distanceR > range && distanceL > range && distanceU < range && directionLRUS == 1) {
+        directionLRUS = CODE_UP;
+        Serial.print("UP ");
+      }
+      else if (distanceR > range && distanceL > range && distanceU > range) {
+        directionLRUS = 0;
+        counter_static = 0;
       }
 
-      if (counter_static >= static_timer) {
-        directionLRUS = CODE_STATIC;
-        //Serial.print("STATIC "); // change mode
-      }
-      else {
-        counter_static++;
-      }
-    } // detect something
-    else if (distanceR < range && distanceL > range && distanceU > range && directionLRUS == 1) {
-      directionLRUS = CODE_RIGHT;
-      Serial.print("RIGHT ");
-    }
-    else if (distanceR > range && distanceL < range && distanceU > range && directionLRUS == 1) {
-      directionLRUS = CODE_LEFT;
-      Serial.print("LEFT ");
-    }
-    else if (distanceR > range && distanceL > range && distanceU < range && directionLRUS == 1) {
-      directionLRUS = CODE_UP;
-      Serial.print("UP ");
-    }
-    else if (distanceR > range && distanceL > range && distanceU > range) {
-      directionLRUS = 0;
-      counter_static = 0;
-    }
+      if (directionLRUS > 0) {
+        Serial.print("(");
+        Serial.print(distanceL);
+        Serial.print("-");
+        Serial.print(distanceU);
+        Serial.print("-");
+        Serial.print(distanceR);
+        Serial.print(")");
+        Serial.println(counter_static);
+      };
 
-    if (directionLRUS > 0) {
-      Serial.print("(");
-      Serial.print(distanceL);
-      Serial.print("-");
-      Serial.print(distanceU);
-      Serial.print("-");
-      Serial.print(distanceR);
-      Serial.print(")");
-      Serial.println(counter_static);
-    };
-
-    if (distanceR > range && distanceL > range && distanceU > range) {
-      return 0;
+      if (distanceR > range && distanceL > range && distanceU > range) {
+        return 0;
+      }
     }
   }
   return directionLRUS;
 }
 
-int detect_LeftRightStatic_longDistance(SFEVL53L1X distanceSensor) { // this function detect 3 mouvements : Left, right and static
+int detect_LeftRightStatic_longDistance() { // this function detect 3 mouvements : Left, right and static
   int range = 2000;
   int directionLRS = 0;
   int counter_static = 0;
   int range_static = 220;
   int static_timer = 10;
+  for (int i = 0; i < NUMBER_OF_TOF_SENSORS; i++) {
+    while (directionLRS != CODE_RIGHT && directionLRS != CODE_LEFT && directionLRS != CODE_STATIC) {
 
-  while (directionLRS != CODE_RIGHT && directionLRS != CODE_LEFT && directionLRS != CODE_STATIC) {
-
-    int distanceL = 0xFFFF;
-    distanceSensor.setROI(4, 4, 106); // left
-    distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
-    while (!distanceSensor.checkForDataReady()) {
-      delayMicroseconds(10);
-    }
-    distanceL = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
-    if (distanceL >= MAX_DISTANCE_LONG_DETECTION) {
-      distanceL = MAX_DISTANCE_LONG_DETECTION;
-    }
-    distanceSensor.clearInterrupt();
-    distanceSensor.stopRanging();
-
-    int distanceR = 0xFFFF;
-    distanceSensor.setROI(4, 4, 10); // right
-    distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
-    while (!distanceSensor.checkForDataReady()) {
-      delayMicroseconds(10);
-    }
-    distanceR = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
-    if (distanceR >= MAX_DISTANCE_LONG_DETECTION) {
-      distanceR = MAX_DISTANCE_LONG_DETECTION;
-    }
-    distanceSensor.clearInterrupt();
-    distanceSensor.stopRanging();
-
-    //Serial.print("DEBUG : ");Serial.print(distanceL);Serial.print(" - ");Serial.println(distanceR);
-    // Détection en deux temps avec flag directionLRS_tmp
-    if (distanceR < range_static && distanceL < range_static) {
-      //if (directionLRS == 0) {
-      //  directionLRS = 1;
-      //  Serial.print("DETECT ");
-      //}
-
-      if (counter_static >= static_timer) {
-        directionLRS = CODE_STATIC; Serial.print("STATIC "); // change mode
+      int distanceL = 0xFFFF;
+      distanceSensor[i].setROI(4, 4, 106); // left
+      distanceSensor[i].startRanging(); //Write configuration bytes to initiate measurement
+      while (!distanceSensor[i].checkForDataReady()) {
+        delayMicroseconds(10);
       }
-      else {
-        counter_static++;
+      distanceL = distanceSensor[i].getDistance(); //Get the result of the measurement from the sensor
+      if (distanceL >= MAX_DISTANCE_LONG_DETECTION) {
+        distanceL = MAX_DISTANCE_LONG_DETECTION;
       }
-    } // detect something
-    else if (distanceR < range && distanceL > range) {
-      if (directionLRS == 2) {
-        directionLRS = CODE_RIGHT;
+      distanceSensor[i].clearInterrupt();
+      distanceSensor[i].stopRanging();
+
+      int distanceR = 0xFFFF;
+      distanceSensor[i].setROI(4, 4, 10); // right
+      distanceSensor[i].startRanging(); //Write configuration bytes to initiate measurement
+      while (!distanceSensor[i].checkForDataReady()) {
+        delayMicroseconds(10);
       }
-      else {
-        directionLRS = 3;
+      distanceR = distanceSensor[i].getDistance(); //Get the result of the measurement from the sensor
+      if (distanceR >= MAX_DISTANCE_LONG_DETECTION) {
+        distanceR = MAX_DISTANCE_LONG_DETECTION;
+      }
+      distanceSensor[i].clearInterrupt();
+      distanceSensor[i].stopRanging();
+
+      //Serial.print("DEBUG : ");Serial.print(distanceL);Serial.print(" - ");Serial.println(distanceR);
+      // Détection en deux temps avec flag directionLRS_tmp
+      if (distanceR < range_static && distanceL < range_static) {
+        //if (directionLRS == 0) {
+        //  directionLRS = 1;
+        //  Serial.print("DETECT ");
+        //}
+
+        if (counter_static >= static_timer) {
+          directionLRS = CODE_STATIC; Serial.print("STATIC "); // change mode
+        }
+        else {
+          counter_static++;
+        }
+      } // detect something
+      else if (distanceR < range && distanceL > range) {
+        if (directionLRS == 2) {
+          directionLRS = CODE_RIGHT;
+        }
+        else {
+          directionLRS = 3;
+        }
+
+        //Serial.print("RIGHT ");
+      }
+      else if (distanceR > range && distanceL < range) {
+        if (directionLRS == 3) {
+          directionLRS = CODE_LEFT;
+        }
+        else {
+          directionLRS = 2;
+        }
+      }
+      else if (distanceR > range && distanceL > range) {
+        directionLRS = 0;
+        counter_static = 2;
       }
 
-      //Serial.print("RIGHT ");
-    }
-    else if (distanceR > range && distanceL < range) {
-      if (directionLRS == 3) {
-        directionLRS = CODE_LEFT;
-      }
-      else {
-        directionLRS = 2;
-      }
-    }
-    else if (distanceR > range && distanceL > range) {
-      directionLRS = 0;
-      counter_static = 2;
-    }
+      if (directionLRS > 0) {
+        Serial.print("(");
+        Serial.print(distanceL);
+        Serial.print("-");
+        Serial.print(distanceR);
+        Serial.print(")");
+        Serial.print(counter_static);
+        Serial.print("-");
+        Serial.println(directionLRS);
+      };
 
-    if (directionLRS > 0) {
-      Serial.print("(");
-      Serial.print(distanceL);
-      Serial.print("-");
-      Serial.print(distanceR);
-      Serial.print(")");
-      Serial.print(counter_static);
-      Serial.print("-");
-      Serial.println(directionLRS);
-    };
-
-    if (distanceR > range && distanceL > range) {
-      return 0;
+      if (distanceR > range && distanceL > range) {
+        return 0;
+      }
     }
   }
   return directionLRS;
