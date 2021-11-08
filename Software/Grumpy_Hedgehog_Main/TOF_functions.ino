@@ -1,6 +1,93 @@
 
+void VL53L1X_init(int nbr_sensors) {
 
-void VL53L1X_info() {
+  pinMode(VL53L1X_1, OUTPUT);
+  pinMode(VL53L1X_2, OUTPUT);
+  pinMode(VL53L1X_3, OUTPUT);
+  pinMode(VL53L1X_4, OUTPUT);
+  digitalWrite(VL53L1X_1, LOW);
+  digitalWrite(VL53L1X_2, LOW);
+  digitalWrite(VL53L1X_3, LOW);
+  digitalWrite(VL53L1X_4, LOW);
+
+  if (nbr_sensors >= 1) {
+    digitalWrite(VL53L1X_1, HIGH);
+    delay(150);
+    if (distanceSensor_1.begin() != 0) //Begin returns 0 on a good init
+    {
+      Serial.println("Sensor 1 failed to begin. Please check wiring. Freezing...");
+      while (1);
+    }
+    Serial.print("Sensor 1 address : 0x");
+    Serial.println(distanceSensor_1.getI2CAddress(), HEX);
+    delay(100);
+    distanceSensor_1.setI2CAddress(0x11);
+    //digitalWrite(VL53L1X_1, LOW);
+    delay(100);
+    Serial.print("Sensor 1 address : 0x");
+    Serial.println(distanceSensor_1.getI2CAddress(), HEX);
+    VL53L1X_config(distanceSensor_1); // if we don't start with Person Counter we set a short distance configuration for TOF
+  }
+
+  if (nbr_sensors >= 2) {
+    digitalWrite(VL53L1X_2, HIGH);
+    delay(150);
+    if (distanceSensor_2.begin() != 0) //Begin returns 0 on a good init
+    {
+      Serial.println("Sensor 2 failed to begin. Please check wiring. Freezing...");
+      while (1);
+    }
+    Serial.print("Sensor 2 address : 0x");
+    Serial.println(distanceSensor_2.getI2CAddress(), HEX);
+    delay(100);
+    distanceSensor_2.setI2CAddress(0x22);
+    //digitalWrite(VL53L1X_2, LOW);
+    delay(100);
+    Serial.print("Sensor 2 address : 0x");
+    Serial.println(distanceSensor_2.getI2CAddress(), HEX);
+    VL53L1X_config(distanceSensor_2); // if we don't start with Person Counter we set a short distance configuration for TOF
+  }
+
+  if (nbr_sensors >= 3) {
+    digitalWrite(VL53L1X_3, HIGH);
+    delay(150);
+    if (distanceSensor_3.begin() != 0) //Begin returns 0 on a good init
+    {
+      Serial.println("Sensor 3 failed to begin. Please check wiring. Freezing...");
+      while (1);
+    }
+    Serial.print("Sensor 3 address : 0x");
+    Serial.println(distanceSensor_3.getI2CAddress(), HEX);
+    delay(100);
+    distanceSensor_3.setI2CAddress(0x44);
+    //digitalWrite(VL53L1X_3, LOW);
+    delay(100);
+    Serial.print("Sensor 3 address : 0x");
+    Serial.println(distanceSensor_3.getI2CAddress(), HEX);
+    VL53L1X_config(distanceSensor_3); // if we don't start with Person Counter we set a short distance configuration for TOF
+  }
+
+  if (nbr_sensors >= 4) {
+    digitalWrite(VL53L1X_4, HIGH);
+    delay(150);
+    if (distanceSensor_4.begin() != 0) //Begin returns 0 on a good init
+    {
+      Serial.println("Sensor 4 failed to begin. Please check wiring. Freezing...");
+      while (1);
+    }
+    Serial.print("Sensor 4 address : 0x");
+    Serial.println(distanceSensor_4.getI2CAddress(), HEX);
+    delay(100);
+    distanceSensor_4.setI2CAddress(0x88);
+    //digitalWrite(VL53L1X_4, LOW);
+    delay(100);
+    Serial.print("Sensor 4 address : 0x");
+    Serial.println(distanceSensor_4.getI2CAddress(), HEX);
+    VL53L1X_config(distanceSensor_4); // if we don't start with Person Counter we set a short distance configuration for TOF
+  }
+}
+
+void VL53L1X_info(SFEVL53L1X distanceSensor) {
   VL53L1X_Version_t Version = distanceSensor.getSoftwareVersion();
   Serial.print("Software Version : 0x");
   Serial.print((Version.major), HEX); Serial.print(" 0x");
@@ -20,7 +107,7 @@ void VL53L1X_info() {
   //Serial.print("ThresholdHigh : ");Serial.println(distanceSensor.getDistanceThresholdHigh());
 }
 
-void VL53L1X_config() {
+void VL53L1X_config(SFEVL53L1X distanceSensor) {
   int read_delay = 20; //ms
   //distanceSensor.setDistanceThreshold(300, 400,3);
   //distanceSensor.setI2CAddress(0x52); // default 0xEACC
@@ -31,7 +118,10 @@ void VL53L1X_config() {
   distanceSensor.setIntermeasurementPeriod(read_delay);
 }
 
-void VL53L1X_config_long() {
+/*
+ * Setting long distance configuration with a longer Timing Budget 
+*/
+void VL53L1X_config_long(SFEVL53L1X distanceSensor) {
   int read_delay = 100; //ms
   //distanceSensor.setDistanceThreshold(300, 400,3);
   //distanceSensor.setI2CAddress(0x52); // default 0xEACC
@@ -46,7 +136,7 @@ void VL53L1X_config_long() {
    Read sensor and print patern on the LCD
    If the sensor is saturated with an object for few seconds, it leaves the function
 */
-int detect_patern(int nb_lines, int nb_colones) {
+int detect_patern(SFEVL53L1X distanceSensor, int nb_lines, int nb_colones) {
   int cpt_match_patern_1 = 0;
   int cpt_match_patern_2 = 0;
   int cpt_match_patern_3 = 0;
@@ -176,7 +266,7 @@ int detect_patern(int nb_lines, int nb_colones) {
       HH_speak("1");
       patern_1_secret_action();
       delay(4000);
-      if (detect_All() == 0) {
+      if (detect_All(distanceSensor_1) == 0) {
         return 1;
       }
     }
@@ -185,7 +275,7 @@ int detect_patern(int nb_lines, int nb_colones) {
       HH_speak("2");
       patern_2_secret_action();
       delay(4000);
-      if (detect_All() == 0) {
+      if (detect_All(distanceSensor_1) == 0) {
         return 2;
       }
     }
@@ -194,7 +284,7 @@ int detect_patern(int nb_lines, int nb_colones) {
       HH_speak("3");
       patern_3_secret_action();
       delay(4000);
-      if (detect_All() == 0) {
+      if (detect_All(distanceSensor_1) == 0) {
         return 3;
       }
     }
@@ -211,16 +301,16 @@ int detect_patern(int nb_lines, int nb_colones) {
 }
 
 
-int look_around() {
+int look_around(SFEVL53L1X distanceSensor) {
   int nb_colones = 4;
   int nb_lines = 4;
   int exit_flag_detection_range = 80;
   int exit_flag_detection = 0;
-  int lastvalueX=0;
-  int lastvalueY=0;
+  int lastvalueX = 0;
+  int lastvalueY = 0;
 
   while (exit_flag_detection < 3) {
-    
+
     int major_positionX = -1;
     int major_positionY = -1;
     int major_positionLast = 0xFF;
@@ -236,20 +326,20 @@ int look_around() {
     }
 
     int nb_ROI = nb_colones * nb_lines;
-    int data=0;
-    int cpt_data=0;
-    
+    int data = 0;
+    int cpt_data = 0;
+
     for (int i = 0; i < nb_lines; i++) {
       for (int j = 0; j < nb_colones; j++) {
-        if((i==0 || i==3) || (j==0 || j==3)){
-          
+        if ((i == 0 || i == 3) || (j == 0 || j == 3)) {
+
           distanceSensor.setROI(MATRICE_DIMENSION / (nb_colones), MATRICE_DIMENSION / (nb_lines), opticalCalcul(i, j, nb_lines, nb_colones));
           distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
           while (!distanceSensor.checkForDataReady()) {
             delay(1);
           }
           int distance = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
-          
+
           if (distance >= range) {
             distance = range;
           }
@@ -258,10 +348,10 @@ int look_around() {
           }
 
           if (distance < range) {
-            data |= 1<<cpt_data;
+            data |= 1 << cpt_data;
           }
-  
-          if (major_positionLast > distance && (i==0 || i==3) && (j==0 || j==3)) {
+
+          if (major_positionLast > distance && (i == 0 || i == 3) && (j == 0 || j == 3)) {
             //Serial.print("(");Serial.print(i);Serial.print(j);Serial.print(")");Serial.print("< ");Serial.print(distance);Serial.print(" >");
             //Serial.println();
             major_positionX = i;
@@ -270,7 +360,9 @@ int look_around() {
           }
           distanceSensor.clearInterrupt();
           distanceSensor.stopRanging();
-          if(cpt_data<12){cpt_data++;}
+          if (cpt_data < 12) {
+            cpt_data++;
+          }
         }
       }
     }
@@ -281,58 +373,58 @@ int look_around() {
     //Serial.print("DATA=");Serial.print(data,HEX);Serial.print(" --- ");Serial.print(data, BIN);Serial.print("---");
     int newvalueY;
     int newvalueX;
-    
-    if(data == 0x001 || data == 0x003 || data == 0x011 || data == 0x013 || data == 0x017 || data == 0x053 || data == 0x057){// || data == 0x017 || data == 0x053 || data == 0x057){
+
+    if (data == 0x001 || data == 0x003 || data == 0x011 || data == 0x013 || data == 0x017 || data == 0x053 || data == 0x057) { // || data == 0x017 || data == 0x053 || data == 0x057){
       Serial.println("TOP LEFT");// Top left
-      newvalueY=-10;newvalueX=-10;
+      newvalueY = -10; newvalueX = -10;
     }
-    else if(data == 0x100 || data == 0x300 || data == 0x140 || data == 0x340 || data == 0x350 || data == 0x740 || data == 0x750){
+    else if (data == 0x100 || data == 0x300 || data == 0x140 || data == 0x340 || data == 0x350 || data == 0x740 || data == 0x750) {
       Serial.println("BOT LEFT");// Bot left
-      newvalueY=-10;newvalueX=10;
+      newvalueY = -10; newvalueX = 10;
     }
-    else if(data == 0x008 || data == 0x00C || data == 0x028 || data == 0x02C || data == 0x02E || data == 0x0AC || data == 0x0AE){
+    else if (data == 0x008 || data == 0x00C || data == 0x028 || data == 0x02C || data == 0x02E || data == 0x0AC || data == 0x0AE) {
       Serial.println("TOP RIGHT");// Top right
-      newvalueY=10;newvalueX=-10;
+      newvalueY = 10; newvalueX = -10;
     }
-    else if(data == 0x800 || data == 0x880 || data == 0xC00 || data == 0xC80 || data == 0xE80 || data == 0xCA0 || data == 0xEA0){
+    else if (data == 0x800 || data == 0x880 || data == 0xC00 || data == 0xC80 || data == 0xE80 || data == 0xCA0 || data == 0xEA0) {
       Serial.println("BOT RIGHT");// Bot right
-      newvalueY=10;newvalueX=10;
+      newvalueY = 10; newvalueX = 10;
     }
-    else if(data == 0x00F || data == 0x02F || data == 0x01F || data == 0x03F){
+    else if (data == 0x00F || data == 0x02F || data == 0x01F || data == 0x03F) {
       Serial.println("TOP");// top
-      newvalueY=0;newvalueX=-10;
+      newvalueY = 0; newvalueX = -10;
     }
-    else if(data == 0x151 || data == 0x153 || data == 0x351 || data == 0x353){
+    else if (data == 0x151 || data == 0x153 || data == 0x351 || data == 0x353) {
       Serial.println("LEFT");// left
-      newvalueY=-10;newvalueX=0;
+      newvalueY = -10; newvalueX = 0;
     }
-    else if(data == 0xF00 || data == 0xF40 || data == 0xF80 || data == 0xFC0){
+    else if (data == 0xF00 || data == 0xF40 || data == 0xF80 || data == 0xFC0) {
       Serial.println("BOT");// bot
-      newvalueY=0;newvalueX=10;
+      newvalueY = 0; newvalueX = 10;
     }
-    else if(data == 0x8A8 || data == 0x8AC || data == 0xCA8 || data == 0xCAC){
+    else if (data == 0x8A8 || data == 0x8AC || data == 0xCA8 || data == 0xCAC) {
       Serial.println("RIGHT");// right
-      newvalueY=10;newvalueX=0;
+      newvalueY = 10; newvalueX = 0;
     }
-    else if(data == 0x0F0 || data == 0xFF0 || data == 0x0FF || data == 0xFFF){
+    else if (data == 0x0F0 || data == 0xFF0 || data == 0x0FF || data == 0xFFF) {
       Serial.println("CENTER");// right
-      newvalueY=0;newvalueX=0;
+      newvalueY = 0; newvalueX = 0;
     }
-    // C84 
-    else{
-      Serial.print("--->");Serial.println(data,HEX);
+    // C84
+    else {
+      Serial.print("--->"); Serial.println(data, HEX);
       //newvalueY=0;newvalueX=0;
     }
-    
+
     //int newvalueY = (major_positionY-2)*5;
     //int newvalueX = (major_positionX-2)*5;
-    
+
     if (major_positionLast == 0xFF) {
-      newvalueY=0;
-      newvalueX=0;
+      newvalueY = 0;
+      newvalueX = 0;
     }
-    if(lastvalueY != newvalueY || lastvalueX != newvalueX) {
-      HH_lookFromTo(lastvalueY, lastvalueX, newvalueY,newvalueX);
+    if (lastvalueY != newvalueY || lastvalueX != newvalueX) {
+      HH_lookFromTo(lastvalueY, lastvalueX, newvalueY, newvalueX);
       lastvalueY = newvalueY;
       lastvalueX = newvalueX;
     }
@@ -348,17 +440,76 @@ int look_around() {
   return 0;
 }
 
+/*
+   Check the entire grid of the sensor. If it detect a value inside the defined range
+   Return 1 if something is detected
+*/
+int detect_4_sensors(int tab[4][200], int cpt) {
+  int range = 250;
+  int distance_1 = MAX_DISTANCE_SHORT_DETECTION;
+  int distance_2 = MAX_DISTANCE_SHORT_DETECTION;
+  int distance_3 = MAX_DISTANCE_SHORT_DETECTION;
+  int distance_4 = MAX_DISTANCE_SHORT_DETECTION;
+
+  distanceSensor_1.setROI(16, 16, 198);
+  distanceSensor_2.setROI(16, 16, 198);
+  distanceSensor_3.setROI(16, 16, 198);
+  distanceSensor_4.setROI(16, 16, 198);
+
+  distanceSensor_1.startRanging(); //Write configuration bytes to initiate measurement
+  distanceSensor_2.startRanging(); //Write configuration bytes to initiate measurement
+  distanceSensor_3.startRanging(); //Write configuration bytes to initiate measurement
+  distanceSensor_4.startRanging(); //Write configuration bytes to initiate measurement
+
+  while (!distanceSensor_1.checkForDataReady()) {
+    delay(1);
+  }
+  while (!distanceSensor_2.checkForDataReady()) {
+    delay(1);
+  }
+  while (!distanceSensor_3.checkForDataReady()) {
+    delay(1);
+  }
+  while (!distanceSensor_4.checkForDataReady()) {
+    delay(1);
+  }
+
+  tab[0][cpt] = distanceSensor_1.getDistance() / 100; //Get the result of the measurement from the sensor
+  tab[1][cpt] = distanceSensor_2.getDistance() / 100; //Get the result of the measurement from the sensor
+  tab[2][cpt] = distanceSensor_3.getDistance() / 100; //Get the result of the measurement from the sensor
+  tab[3][cpt] = distanceSensor_4.getDistance() / 100; //Get the result of the measurement from the sensor
+
+  if (distance_1 >= MAX_DISTANCE_SHORT_DETECTION) {
+    distance_1 = MAX_DISTANCE_SHORT_DETECTION;
+  }
+  distanceSensor_1.clearInterrupt();
+  distanceSensor_1.stopRanging();
+  distanceSensor_2.clearInterrupt();
+  distanceSensor_2.stopRanging();
+  distanceSensor_3.clearInterrupt();
+  distanceSensor_3.stopRanging();
+  distanceSensor_4.clearInterrupt();
+  distanceSensor_4.stopRanging();
+
+  if (distance_1 < range) {
+    return 1;
+  }
+  else {
+    return 0;
+  }
+}
+
 
 /*
    Check the entire grid of the sensor. If it detect a value inside the defined range
    Return 1 if something is detected
 */
-int detect_All() {
+int detect_All(SFEVL53L1X distanceSensor) {
   int range = 250;
   int distanceAll = MAX_DISTANCE_SHORT_DETECTION;
-  distanceSensor.setROI(16, 16, 198); 
+  distanceSensor.setROI(16, 16, 198);
   distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
-  while (!distanceSensor.checkForDataReady()) {
+  while (!distanceSensor_1.checkForDataReady()) {
     delay(1);
   }
   distanceAll = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
@@ -380,10 +531,10 @@ int detect_All() {
    Check the entire grid of the sensor. If it detect a value inside the defined range
    Return 1 if something is detected
 */
-int detect_All_longDistance() {
+int detect_All_longDistance(SFEVL53L1X distanceSensor) {
   int range = 2000;
   int distanceAll = MAX_DISTANCE_LONG_DETECTION;
-  distanceSensor.setROI(16, 16, 198); 
+  distanceSensor.setROI(16, 16, 198);
   distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
   while (!distanceSensor.checkForDataReady()) {
     delay(1);
@@ -403,7 +554,7 @@ int detect_All_longDistance() {
   }
 }
 
-int detect_LeftRightUpStatic() { // this function detect 4 mouvements : Left, right, up, and static
+int detect_LeftRightUpStatic(SFEVL53L1X distanceSensor) { // this function detect 4 mouvements : Left, right, up, and static
   int range = 220;
   int directionLRUS = 0;
   int counter_static = 0;
@@ -458,7 +609,7 @@ int detect_LeftRightUpStatic() { // this function detect 4 mouvements : Left, ri
       }
 
       if (counter_static >= static_timer) {
-        directionLRUS = CODE_STATIC; 
+        directionLRUS = CODE_STATIC;
         //Serial.print("STATIC "); // change mode
       }
       else {
@@ -500,7 +651,7 @@ int detect_LeftRightUpStatic() { // this function detect 4 mouvements : Left, ri
   return directionLRUS;
 }
 
-int detect_LeftRightStatic_longDistance() { // this function detect 3 mouvements : Left, right and static
+int detect_LeftRightStatic_longDistance(SFEVL53L1X distanceSensor) { // this function detect 3 mouvements : Left, right and static
   int range = 2000;
   int directionLRS = 0;
   int counter_static = 0;
@@ -508,7 +659,7 @@ int detect_LeftRightStatic_longDistance() { // this function detect 3 mouvements
   int static_timer = 10;
 
   while (directionLRS != CODE_RIGHT && directionLRS != CODE_LEFT && directionLRS != CODE_STATIC) {
-    
+
     int distanceL = 0xFFFF;
     distanceSensor.setROI(4, 4, 106); // left
     distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
@@ -521,7 +672,7 @@ int detect_LeftRightStatic_longDistance() { // this function detect 3 mouvements
     }
     distanceSensor.clearInterrupt();
     distanceSensor.stopRanging();
-    
+
     int distanceR = 0xFFFF;
     distanceSensor.setROI(4, 4, 10); // right
     distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
@@ -534,7 +685,7 @@ int detect_LeftRightStatic_longDistance() { // this function detect 3 mouvements
     }
     distanceSensor.clearInterrupt();
     distanceSensor.stopRanging();
-    
+
     //Serial.print("DEBUG : ");Serial.print(distanceL);Serial.print(" - ");Serial.println(distanceR);
     // Détection en deux temps avec flag directionLRS_tmp
     if (distanceR < range_static && distanceL < range_static) {
@@ -551,20 +702,20 @@ int detect_LeftRightStatic_longDistance() { // this function detect 3 mouvements
       }
     } // detect something
     else if (distanceR < range && distanceL > range) {
-      if(directionLRS==2){
+      if (directionLRS == 2) {
         directionLRS = CODE_RIGHT;
       }
-      else{
+      else {
         directionLRS = 3;
       }
-      
+
       //Serial.print("RIGHT ");
     }
     else if (distanceR > range && distanceL < range) {
-      if(directionLRS==3){
+      if (directionLRS == 3) {
         directionLRS = CODE_LEFT;
       }
-      else{
+      else {
         directionLRS = 2;
       }
     }
@@ -685,7 +836,7 @@ uint8_t opticalCalcul(int i, int j, int nb_lines, int nb_colones) {
 }
 
 /*
-uint8_t opticalTable[16][16] = {
+  uint8_t opticalTable[16][16] = {
   {128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248},
   {129, 137, 145, 153, 161, 169, 177, 185, 193, 201, 209, 217, 225, 233, 241, 249},
   {130, 138, 146, 154, 162, 170, 178, 186, 194, 202, 210, 218, 226, 234, 242, 250},
@@ -702,9 +853,9 @@ uint8_t opticalTable[16][16] = {
   {122, 114, 106, 98, 90, 82, 74, 66, 58, 50, 42, 34, 26, 18, 10, 2},
   {121, 113, 105, 97, 89, 81, 73, 65, 57, 49, 41, 33, 25, 17, 9, 1},
   {120, 112, 104, 96, 88, 80, 72, 64, 56, 48, 40, 32, 24, 16, 8, 0}
-};
+  };
 
-uint8_t optical_table[256] = {
+  uint8_t optical_table[256] = {
   128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248,
   129, 137, 145, 153, 161, 169, 177, 185, 193, 201, 209, 217, 225, 233, 241, 249,
   130, 138, 146, 154, 162, 170, 178, 186, 194, 202, 210, 218, 226, 234, 242, 250,
@@ -721,5 +872,5 @@ uint8_t optical_table[256] = {
   122, 114, 106, 98, 90, 82, 74, 66, 58, 50, 42, 34, 26, 18, 10, 2,
   121, 113, 105, 97, 89, 81, 73, 65, 57, 49, 41, 33, 25, 17, 9, 1,
   120, 112, 104, 96, 88, 80, 72, 64, 56, 48, 40, 32, 24, 16, 8, 0
-};
+  };
 */
