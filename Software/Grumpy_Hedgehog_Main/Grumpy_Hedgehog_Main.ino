@@ -245,10 +245,10 @@ void loop() {
   if (detection_trigger) {
     int Direction = 0;
     if (device_MODE != MODE_PERSON_COUNTER) {
-      // ***Direction = detect_LeftRightUpStatic(); // This function detect one of the 4 mouvements : Left / Right / Up / Static
+      Direction = detect_LeftRightUpStatic(); // This function detect one of the 4 mouvements : Left / Right / Up / Static
     }
     else {
-      // ***Direction = detect_LeftRightUpStatic(); // This function detect one of the 4 mouvements : Left / Right / Up / Static
+      Direction = detect_LeftRightUpStatic(); // This function detect one of the 4 mouvements : Left / Right / Up / Static
       //Direction = detect_LeftRightStatic_longDistance(); // This function detect one of the 3 mouvements : Left / Right / Static for Person Counter (long distance)
     }
     if (Direction) {
